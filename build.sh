@@ -8,7 +8,7 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 swiftc -O -swift-version 5 -target arm64-apple-macos14.0 Sources/*.swift \
   -o "$APP/Contents/MacOS/BlueNotch" \
-  -framework IOBluetooth -framework IOKit -framework ServiceManagement -framework SwiftUI -framework AppKit
+  -framework IOBluetooth -framework CoreBluetooth -framework IOKit -framework ServiceManagement -framework SwiftUI -framework AppKit
 cp Info.plist "$APP/Contents/Info.plist"
 codesign --force --sign - "$APP"
 echo "Built $APP"

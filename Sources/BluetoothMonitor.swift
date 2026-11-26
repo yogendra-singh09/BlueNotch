@@ -47,6 +47,10 @@ final class BluetoothMonitor: NSObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in self?.poll() }
     }
 
+    var connectedDevices: [BTDevice] {
+        snapshot().filter { $0.1 }.map { $0.0 }.sorted { $0.name < $1.name }
+    }
+
     private func snapshot() -> [(BTDevice, Bool)] {
         var devices: [String: IOBluetoothDevice] = extraDevices
         for d in (IOBluetoothDevice.pairedDevices() as? [IOBluetoothDevice]) ?? [] {

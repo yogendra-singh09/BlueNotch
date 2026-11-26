@@ -59,6 +59,7 @@ BlueNotch runs in the background. Its menu-bar icon offers:
 
 | Menu item | What it does |
 |---|---|
+| Show Connected Devices | Show a notification, with battery, for every device connected right now |
 | Preview Connect / Preview Disconnect | Show a sample notification |
 | Pause Notifications | Temporarily stop showing notifications |
 | Launch at Login | Start BlueNotch automatically when you log in |
@@ -66,13 +67,14 @@ BlueNotch runs in the background. Its menu-bar icon offers:
 
 ## Battery support
 
-macOS has no single public API for Bluetooth battery levels, so BlueNotch checks three sources:
+macOS has no single public API for Bluetooth battery levels, so BlueNotch checks four sources:
 
 1. IOBluetooth device properties (AirPods, Beats, many hands-free headsets)
 2. `system_profiler SPBluetoothDataType` (most headsets / earbuds)
 3. IOKit HID `BatteryPercent` (Apple keyboards, mice, trackpads, some third-party HID devices)
+4. The standard **BLE Battery Service** (`0x180F` / `0x2A19`), read directly with CoreBluetooth. Many third-party BLE mice and keyboards report their battery only this way.
 
-Battery levels often arrive a second or two after the device connects, so the app retries for about 3 seconds and updates the notification once a value appears. **If a device doesn't report battery to macOS at all (many third-party mice do not), no percentage is shown.**
+Battery levels often arrive a second or two after the device connects, so the app retries for about 3 seconds and updates the notification once a value appears. **If a device doesn't expose its battery through any of these, no percentage is shown.**
 
 ## Customisation
 
@@ -98,6 +100,7 @@ BlueNotch/
     ├── main.swift              # app entry, menu bar, event handling
     ├── BluetoothMonitor.swift  # connect / disconnect detection
     ├── DeviceInfo.swift        # battery lookup + device icons
+    ├── BLEBattery.swift        # BLE Battery Service reader (CoreBluetooth)
     └── Notch.swift             # notch window, animation, SwiftUI views
 ```
 
@@ -111,7 +114,7 @@ BlueNotch/
 | Problem | Fix |
 |---|---|
 | No notification appears | Check Bluetooth permission (see *First launch*), and make sure *Pause Notifications* is off |
-| No battery percentage | The device probably doesn't report battery to macOS. Check whether the battery shows in Control Centre → Bluetooth. |
+| No battery percentage | The device doesn't expose its battery over any supported channel. Try *Show Connected Devices* a few seconds after connecting, since some devices report battery late. |
 | BLE device shows a second late | Expected: BLE devices are detected by the 2-second poll |
 | "Couldn't change Launch at Login" | Make sure the app is in `~/Applications` or `/Applications` (use `./build.sh install`) |
 | Intel Mac | In `build.sh`, change `-target arm64-apple-macos14.0` to `-target x86_64-apple-macos14.0` |

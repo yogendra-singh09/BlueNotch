@@ -4,6 +4,7 @@ import ServiceManagement
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let monitor = BluetoothMonitor()
     private let notch = NotchController()
+    private let bleBattery = BLEBatteryReader()
     private var statusItem: NSStatusItem!
     private var profileCache: [String: ProfileEntry] = [:]
     private let bg = DispatchQueue(label: "bluenotch.info", qos: .utility)
@@ -28,12 +29,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if CommandLine.arguments.contains("--preview") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) { self.testConnect() }
         }
+        if CommandLine.arguments.contains("--show-connected") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { self.showConnected() }
+        }
     }
 
     // MARK: - Events
 
     private func handle(_ device: BTDevice, connected: Bool) {
         guard !paused else { return }
+        show(device, connected: connected)
+    }
+
+    private func show(_ device: BTDevice, connected: Bool) {
         var event = NotchEvent(name: device.name, connected: connected, date: Date(),
                                symbol: symbol(for: device), battery: nil)
         if connected { event.battery = DeviceInfo.ioBluetoothBattery(rawAddress: device.rawAddress) }
@@ -66,8 +74,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     e.symbol = symbol
                     if let battery { e.battery = battery }
                 }
-                if connected && battery == nil {
-                    self.refreshInfo(for: device, eventID: eventID, connected: connected, attempt: attempt + 1)
+                guard connected && battery == nil else { return }
+
+                // Last resort: read the BLE Battery Service directly (third-party mice/keyboards).
+                self.bleBattery.read(name: device.name) { pct in
+                    if let pct {
+                        self.notch.update(id: eventID) { $0.battery = BatteryInfo(main: pct) }
+                    } else {
+                        self.refreshInfo(for: device, eventID: eventID, connected: connected, attempt: attempt + 1)
+                    }
                 }
             }
         }
@@ -96,6 +111,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                               battery: nil))
     }
 
+    /// Shows a notification (with battery) for every device that's connected right now.
+    @objc private func showConnected() {
+        let devices = monitor.connectedDevices
+        guard !devices.isEmpty else {
+            notch.show(NotchEvent(name: "No devices connected", connected: false, date: Date(),
+                                  symbol: "dot.radiowaves.left.and.right", battery: nil))
+            return
+        }
+        devices.forEach { show($0, connected: true) }
+    }
+
     @objc private func togglePause() { paused.toggle() }
 
     @objc private func toggleLogin() {
@@ -122,6 +148,8 @@ extension AppDelegate: NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
         menu.addItem(withTitle: "BlueNotch", action: nil, keyEquivalent: "").isEnabled = false
+        menu.addItem(.separator())
+        menu.addItem(withTitle: "Show Connected Devices", action: #selector(showConnected), keyEquivalent: "").target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: "Preview Connect", action: #selector(testConnect), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Preview Disconnect", action: #selector(testDisconnect), keyEquivalent: "").target = self
