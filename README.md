@@ -18,7 +18,8 @@ A tiny macOS menu-bar app that shows a **Dynamic Island–style notification und
 - Works with both Classic Bluetooth (headphones, speakers) and Bluetooth Low Energy devices (mice, keyboards)
 - Appears on **every screen**. External displays without a notch get a matching pill at the top centre.
 - Lightweight: native Swift + SwiftUI, no dependencies, no Dock icon
-- Menu-bar controls: preview, pause, launch at login, quit
+- Plays a short sound: **Glass** on connect, **Bottle** on disconnect. It follows your system volume and can be turned off.
+- Menu-bar controls: show connected devices, preview, pause, sound, launch at login, quit
 
 ## Requirements
 
@@ -62,6 +63,7 @@ BlueNotch runs in the background. Its menu-bar icon offers:
 | Show Connected Devices | Show a notification, with battery, for every device connected right now |
 | Preview Connect / Preview Disconnect | Show a sample notification |
 | Pause Notifications | Temporarily stop showing notifications |
+| Play Sound | Turn the connect/disconnect sound on or off |
 | Launch at Login | Start BlueNotch automatically when you log in |
 | Quit BlueNotch | Exit the app |
 
@@ -87,6 +89,7 @@ Edit the values below, then run `./build.sh install` again.
 | Content height | `contentHeight` in `Sources/Notch.swift` |
 | Polling interval for BLE devices | `Timer(timeInterval: 2.0 …)` in `Sources/BluetoothMonitor.swift` |
 | Device icons | `DeviceInfo.symbol(...)` in `Sources/DeviceInfo.swift` |
+| Sounds | `connectSound` / `disconnectSound` in `Sources/main.swift` (any name from `/System/Library/Sounds`) |
 
 > Note: the app is ad-hoc signed, so macOS may ask for Bluetooth permission again after each rebuild.
 

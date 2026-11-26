@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.async { self.profileCache = profile }
         }
 
+        notch.onPresent = { [weak self] event in self?.playSound(for: event) }
         monitor.onChange = { [weak self] device, connected in self?.handle(device, connected: connected) }
         monitor.start()
 
@@ -124,6 +125,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func togglePause() { paused.toggle() }
 
+    // MARK: - Sound
+
+    static let connectSound = "Glass"      // any name from /System/Library/Sounds
+    static let disconnectSound = "Bottle"
+
+    /// Stored inverted so the default (key absent) is "sound on".
+    private var soundEnabled: Bool {
+        get { !UserDefaults.standard.bool(forKey: "soundMuted") }
+        set { UserDefaults.standard.set(!newValue, forKey: "soundMuted") }
+    }
+
+    @objc private func toggleSound() { soundEnabled.toggle() }
+
+    private func playSound(for event: NotchEvent) {
+        guard soundEnabled else { return }
+        let name = event.connected ? Self.connectSound : Self.disconnectSound
+        // Copy so overlapping events can each play instead of being dropped.
+        (NSSound(named: name)?.copy() as? NSSound)?.play()
+    }
+
     @objc private func toggleLogin() {
         let service = SMAppService.mainApp
         do {
@@ -157,6 +178,9 @@ extension AppDelegate: NSMenuDelegate {
         let pause = menu.addItem(withTitle: "Pause Notifications", action: #selector(togglePause), keyEquivalent: "")
         pause.target = self
         pause.state = paused ? .on : .off
+        let sound = menu.addItem(withTitle: "Play Sound", action: #selector(toggleSound), keyEquivalent: "")
+        sound.target = self
+        sound.state = soundEnabled ? .on : .off
         let login = menu.addItem(withTitle: "Launch at Login", action: #selector(toggleLogin), keyEquivalent: "")
         login.target = self
         login.state = SMAppService.mainApp.status == .enabled ? .on : .off

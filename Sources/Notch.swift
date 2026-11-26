@@ -43,6 +43,8 @@ struct NotchGeometry {
 final class NotchController {
     let model = NotchModel()
     var displayDuration: TimeInterval = 4.0
+    /// Called each time an event becomes visible (used for the sound).
+    var onPresent: ((NotchEvent) -> Void)?
 
     private var panels: [NSPanel] = []
     private var queue: [NotchEvent] = []
@@ -54,6 +56,7 @@ final class NotchController {
             // Same device flapping? Replace the visible one instead of queueing.
             if let current = model.event, current.name == event.name, model.expanded {
                 withAnimation(.easeInOut(duration: 0.25)) { model.event = event }
+                onPresent?(event)
                 scheduleHide()
             } else {
                 queue.append(event)
@@ -78,6 +81,7 @@ final class NotchController {
         rebuildPanels()
         model.expanded = false
         model.event = event
+        onPresent?(event)
         panels.forEach { $0.orderFrontRegardless() }
         DispatchQueue.main.async {
             withAnimation(.spring(response: 0.42, dampingFraction: 0.74)) { self.model.expanded = true }
